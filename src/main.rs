@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::WorldInspectorPlugin;
+use std::f32::consts::PI;
 
 pub const HEIGHT: f32 = 720.0;
 pub const WIDTH: f32 = 1280.0;
@@ -10,19 +11,25 @@ pub struct PlayerMain;
 #[derive(Component)]
 pub struct PlayerSub;
 
+#[derive(Resource)]
+pub struct GameAssets {
+    ball: Handle<Scene>,
+}
+
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb(0.2, 0.2, 0.2)))
-        .add_plugins(DefaultPlugins.set(WindowPlugin{
-            window: WindowDescriptor{
-            width: WIDTH,
-            height: HEIGHT,
-            title: "Football Simulator".to_string(),
-            ..default()
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            window: WindowDescriptor {
+                width: WIDTH,
+                height: HEIGHT,
+                title: "Football Simulator".to_string(),
+                ..default()
             },
             ..default()
         }))
         .add_plugin(WorldInspectorPlugin::new())
+        .add_startup_system_to_stage(StartupStage::PreStartup, asset_loading)
         .add_startup_system(draw_field)
         .add_startup_system(camera_spawn)
         .add_system(bevy::window::close_on_esc)
@@ -32,64 +39,79 @@ fn main() {
         .run();
 }
 
+fn asset_loading(mut commands: Commands, assets: Res<AssetServer>) {
+    commands.insert_resource(GameAssets {
+        ball: assets.load("ball.glb#Scene0"),
+    });
+}
+
 fn draw_field(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-){
+    game_assets: Res<GameAssets>,
+) {
     //field
-    commands.spawn(PbrBundle{
-        mesh: meshes.add(Mesh::from(shape::Plane{
-            size: 10.0,
-        })),
-        material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-        ..default()
-    })
-    .insert(Name::new("Grass"));
+    commands
+        .spawn(PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Plane { size: 10.0 })),
+            material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
+            ..default()
+        })
+        .insert(Name::new("Grass"));
 
-    //player
-    commands.spawn(PbrBundle{
-        mesh: meshes.add(Mesh::from(shape::Cube{
-            size: 0.5,
-        })),
-        material: materials.add(Color::rgb(0.55, 0.96, 0.96).into()),
-        transform: Transform::from_xyz(-2.0, 0.25, 0.0),
-        ..default()
-    })
-    .insert(PlayerMain)
-    .insert(Name::new("Player main"));
+    //player main
+    commands
+        .spawn(PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
+            material: materials.add(Color::rgb(0.55, 0.96, 0.96).into()),
+            transform: Transform::from_xyz(-2.0, 0.25, 0.0),
+            ..default()
+        })
+        .insert(PlayerMain)
+        .insert(Name::new("Player main"));
 
-    //player
-    commands.spawn(PbrBundle{
-        mesh: meshes.add(Mesh::from(shape::Cube{
-            size: 0.5,
-        })),
-        material: materials.add(Color::rgb(0.98, 0.58, 0.53).into()),
-        transform: Transform::from_xyz(2.0, 0.25, 0.0),
-        ..default()
-    })
-    .insert(PlayerSub)
-    .insert(Name::new("Player Sub"));
+    //player sub
+    commands
+        .spawn(PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Cube { size: 0.5 })),
+            material: materials.add(Color::rgb(0.98, 0.58, 0.53).into()),
+            transform: Transform::from_xyz(2.0, 0.25, 0.0),
+            ..default()
+        })
+        .insert(PlayerSub)
+        .insert(Name::new("Player Sub"));
+
+    //ball
+    commands
+        .spawn(SceneBundle {
+            scene: game_assets.ball.clone(),
+            transform:  Transform::from_xyz(0.0, 0.7, 0.6)
+                .with_rotation(Quat::from_rotation_y(-PI / 2.0))
+                .with_scale(Vec3::new(0.05, 0.05, 0.05)),
+            ..Default::default()
+        })
+        .insert(Name::new("Ball"));
 
     //light
     commands
-    .spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
-            shadows_enabled: true,
+        .spawn(PointLightBundle {
+            point_light: PointLight {
+                intensity: 1500.0,
+                shadows_enabled: true,
+                ..default()
+            },
+            transform: Transform::from_xyz(4.0, 8.0, 4.0),
             ..default()
-        },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..default()
-    })
-    .insert(Name::new("Light"));
+        })
+        .insert(Name::new("Light"));
 }
 
 fn player_movement(
     keyboard: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut player_query: Query<&mut Transform, With<PlayerMain>>,
-){
+) {
     let mut player = player_query.single_mut();
 
     let mut left = player.left();
@@ -108,11 +130,11 @@ fn player_movement(
     if keyboard.pressed(KeyCode::S) {
         player.translation -= forward * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::D){
-        player.translation -= left * speed * time.delta_seconds(); 
+    if keyboard.pressed(KeyCode::D) {
+        player.translation -= left * speed * time.delta_seconds();
     }
-    if keyboard.pressed(KeyCode::A){
-        player.translation += left * speed * time.delta_seconds(); 
+    if keyboard.pressed(KeyCode::A) {
+        player.translation += left * speed * time.delta_seconds();
     }
 }
 
@@ -120,7 +142,7 @@ fn second_player_movement(
     keyboard: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut player_query: Query<&mut Transform, With<PlayerSub>>,
-){
+) {
     let mut player = player_query.single_mut();
 
     let mut left = player.left();
@@ -139,17 +161,16 @@ fn second_player_movement(
     if keyboard.pressed(KeyCode::Down) {
         player.translation -= forward * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::Right){
-        player.translation -= left * speed * time.delta_seconds(); 
+    if keyboard.pressed(KeyCode::Right) {
+        player.translation -= left * speed * time.delta_seconds();
     }
-    if keyboard.pressed(KeyCode::Left){
-        player.translation += left * speed * time.delta_seconds(); 
+    if keyboard.pressed(KeyCode::Left) {
+        player.translation += left * speed * time.delta_seconds();
     }
 }
 
-fn camera_spawn(mut commands: Commands){
-    commands
-    .spawn(Camera3dBundle {
+fn camera_spawn(mut commands: Commands) {
+    commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0.037, 2.5, 8.372).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
