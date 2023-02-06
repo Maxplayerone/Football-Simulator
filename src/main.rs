@@ -1,7 +1,14 @@
 use bevy::prelude::*;
+use bevy_inspector_egui::WorldInspectorPlugin;
 
 pub const HEIGHT: f32 = 720.0;
 pub const WIDTH: f32 = 1280.0;
+
+#[derive(Component)]
+pub struct PlayerMain;
+
+#[derive(Component)]
+pub struct PlayerSub;
 
 fn main() {
     App::new()
@@ -15,10 +22,13 @@ fn main() {
             },
             ..default()
         }))
+        .add_plugin(WorldInspectorPlugin::new())
         .add_startup_system(draw_field)
         .add_startup_system(camera_spawn)
         .add_system(bevy::window::close_on_esc)
         .add_system(camera_controls)
+        .add_system(player_movement)
+        .add_system(second_player_movement)
         .run();
 }
 
@@ -43,10 +53,23 @@ fn draw_field(
             size: 0.5,
         })),
         material: materials.add(Color::rgb(0.55, 0.96, 0.96).into()),
-        transform: Transform::from_xyz(0.0, 0.25, 0.0),
+        transform: Transform::from_xyz(-2.0, 0.25, 0.0),
         ..default()
     })
+    .insert(PlayerMain)
     .insert(Name::new("Player main"));
+
+    //player
+    commands.spawn(PbrBundle{
+        mesh: meshes.add(Mesh::from(shape::Cube{
+            size: 0.5,
+        })),
+        material: materials.add(Color::rgb(0.98, 0.58, 0.53).into()),
+        transform: Transform::from_xyz(2.0, 0.25, 0.0),
+        ..default()
+    })
+    .insert(PlayerSub)
+    .insert(Name::new("Player Sub"));
 
     //light
     commands
@@ -62,10 +85,72 @@ fn draw_field(
     .insert(Name::new("Light"));
 }
 
+fn player_movement(
+    keyboard: Res<Input<KeyCode>>,
+    time: Res<Time>,
+    mut player_query: Query<&mut Transform, With<PlayerMain>>,
+){
+    let mut player = player_query.single_mut();
+
+    let mut left = player.left();
+    left.y = 0.0;
+    left = left.normalize();
+
+    let mut forward = player.forward();
+    forward.y = 0.0;
+    forward = forward.normalize();
+
+    let speed = 3.0;
+
+    if keyboard.pressed(KeyCode::W) {
+        player.translation += forward * time.delta_seconds() * speed;
+    }
+    if keyboard.pressed(KeyCode::S) {
+        player.translation -= forward * time.delta_seconds() * speed;
+    }
+    if keyboard.pressed(KeyCode::D){
+        player.translation -= left * speed * time.delta_seconds(); 
+    }
+    if keyboard.pressed(KeyCode::A){
+        player.translation += left * speed * time.delta_seconds(); 
+    }
+}
+
+fn second_player_movement(
+    keyboard: Res<Input<KeyCode>>,
+    time: Res<Time>,
+    mut player_query: Query<&mut Transform, With<PlayerSub>>,
+){
+    let mut player = player_query.single_mut();
+
+    let mut left = player.left();
+    left.y = 0.0;
+    left = left.normalize();
+
+    let mut forward = player.forward();
+    forward.y = 0.0;
+    forward = forward.normalize();
+
+    let speed = 3.0;
+
+    if keyboard.pressed(KeyCode::Up) {
+        player.translation += forward * time.delta_seconds() * speed;
+    }
+    if keyboard.pressed(KeyCode::Down) {
+        player.translation -= forward * time.delta_seconds() * speed;
+    }
+    if keyboard.pressed(KeyCode::Right){
+        player.translation -= left * speed * time.delta_seconds(); 
+    }
+    if keyboard.pressed(KeyCode::Left){
+        player.translation += left * speed * time.delta_seconds(); 
+    }
+}
+
 fn camera_spawn(mut commands: Commands){
     commands
     .spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(0.037, 2.5, 8.372).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
 }
@@ -88,22 +173,22 @@ fn camera_controls(
     let speed = 3.0;
     let rotate_speed = 1.5;
 
-    if keyboard.pressed(KeyCode::W) {
+    if keyboard.pressed(KeyCode::I) {
         camera.translation += forward * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::S) {
+    if keyboard.pressed(KeyCode::K) {
         camera.translation -= forward * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::A) {
+    if keyboard.pressed(KeyCode::J) {
         camera.translation += left * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::D) {
+    if keyboard.pressed(KeyCode::L) {
         camera.translation -= left * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::Q) {
+    if keyboard.pressed(KeyCode::U) {
         camera.rotate_axis(Vec3::Y, rotate_speed * time.delta_seconds())
     }
-    if keyboard.pressed(KeyCode::E) {
+    if keyboard.pressed(KeyCode::O) {
         camera.rotate_axis(Vec3::Y, -rotate_speed * time.delta_seconds())
     }
 }
