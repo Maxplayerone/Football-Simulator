@@ -99,7 +99,7 @@ fn camera_look(
         let mut delta_state = euler_angles.as_mut();
         let mut camera_transform = query.single_mut();
 
-        let window_scale = 720.0;
+        let _window_scale = 720.0;
         let sens: f32 = 0.00012;
         for ev in delta_state.reader_motion.iter(&motion) {
             match window.cursor_grab_mode() {

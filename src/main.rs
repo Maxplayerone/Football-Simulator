@@ -174,51 +174,6 @@ fn second_player_movement(
         player.translation += left * speed * time.delta_seconds();
     }
 }
-
-fn camera_spawn(mut commands: Commands) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.037, 2.5, 8.372).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
-}
-
-fn camera_controls(
-    keyboard: Res<Input<KeyCode>>,
-    mut camera_query: Query<&mut Transform, With<Camera3d>>,
-    time: Res<Time>,
-) {
-    let mut camera = camera_query.single_mut();
-
-    let mut forward = camera.forward();
-    forward.y = 0.0;
-    forward = forward.normalize();
-
-    let mut left = camera.left();
-    left.y = 0.0;
-    left = left.normalize();
-
-    let speed = 3.0;
-    let rotate_speed = 1.5;
-
-    if keyboard.pressed(KeyCode::I) {
-        camera.translation += forward * time.delta_seconds() * speed;
-    }
-    if keyboard.pressed(KeyCode::K) {
-        camera.translation -= forward * time.delta_seconds() * speed;
-    }
-    if keyboard.pressed(KeyCode::J) {
-        camera.translation += left * time.delta_seconds() * speed;
-    }
-    if keyboard.pressed(KeyCode::L) {
-        camera.translation -= left * time.delta_seconds() * speed;
-    }
-    if keyboard.pressed(KeyCode::U) {
-        camera.rotate_axis(Vec3::Y, rotate_speed * time.delta_seconds())
-    }
-    if keyboard.pressed(KeyCode::O) {
-        camera.rotate_axis(Vec3::Y, -rotate_speed * time.delta_seconds())
-    }
-}
 */
 
 use bevy::prelude::*;
@@ -229,6 +184,9 @@ pub const WIDTH: f32 = 1280.0;
 
 mod camera;
 use camera::CustomCameraPlugin;
+
+#[derive(Component)]
+pub struct Player;
 
 fn main() {
     App::new()
@@ -247,6 +205,7 @@ fn main() {
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(CustomCameraPlugin)
         .add_startup_system(setup_physics)
+        .add_system(player_movement)
         .run();
 }
 
@@ -270,6 +229,56 @@ fn setup_physics(
     commands
         .spawn(RigidBody::Dynamic)
         .insert(Collider::ball(0.5))
-        .insert(Restitution::coefficient(1.0))
+        .insert(Restitution::coefficient(0.4))
         .insert(TransformBundle::from(Transform::from_xyz(0.0, 4.0, 0.0)));
+
+        
+    commands
+        .spawn(RigidBody::KinematicPositionBased)
+        .insert(Collider::cuboid(0.5, 0.5, 0.5))
+        .insert(KinematicCharacterController::default())
+        .insert(PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+            material: materials.add(Color::rgb(0.98, 0.58, 0.53).into()),
+            transform: Transform::from_xyz(0.0, 0.5, 0.0),
+            ..default()
+        })
+        .insert(Player); 
+        /*
+        commands.spawn(RigidBody::KinematicPositionBased)
+        .insert(Collider::ball(0.5))
+        .insert(KinematicCharacterController::default());
+        */
+}
+
+//TODO: PLAYER MOVEMENT
+
+fn player_movement(
+    keyboard: Res<Input<KeyCode>>,
+    time: Res<Time>,
+    mut player_query: Query<&mut Transform, With<Player>>,
+) {
+    let mut player = player_query.single_mut();   
+    let mut left = player.left();
+    left.y = 0.0;
+    left = left.normalize();
+
+    let mut forward = player.forward();
+    forward.y = 0.0;
+    forward = forward.normalize();
+
+    let speed = 5.0;
+
+    if keyboard.pressed(KeyCode::Up) {
+        player.translation += forward * time.delta_seconds() * speed;
+    }
+    if keyboard.pressed(KeyCode::Down) {
+        player.translation -= forward * time.delta_seconds() * speed;
+    }
+    if keyboard.pressed(KeyCode::Right) {
+        player.translation -= left * speed * time.delta_seconds();
+    }
+    if keyboard.pressed(KeyCode::Left) {
+        player.translation += left * speed * time.delta_seconds();
+    }
 }
