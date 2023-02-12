@@ -68,16 +68,16 @@ fn camera_controls(
 
     let speed = 3.0;
 
-    if keyboard.pressed(KeyCode::W) {
+    if keyboard.pressed(KeyCode::I) {
         camera.translation += forward * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::S) {
+    if keyboard.pressed(KeyCode::K) {
         camera.translation -= forward * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::A) {
+    if keyboard.pressed(KeyCode::J) {
         camera.translation += left * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::D) {
+    if keyboard.pressed(KeyCode::L) {
         camera.translation -= left * time.delta_seconds() * speed;
     }
     if keyboard.pressed(KeyCode::LControl) {
@@ -106,10 +106,8 @@ fn camera_look(
                 CursorGrabMode::None => (),
                 _ => {
                     let window_scale = 720.0;
-                    delta_state.pitch -=
-                        (sens * ev.delta.y * window_scale).to_radians();
-                    delta_state.yaw -=
-                        (sens * ev.delta.x * window_scale).to_radians();
+                    delta_state.pitch -= (sens * ev.delta.y * window_scale).to_radians();
+                    delta_state.yaw -= (sens * ev.delta.x * window_scale).to_radians();
                 }
             }
 
