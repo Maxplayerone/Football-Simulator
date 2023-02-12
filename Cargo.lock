@@ -614,16 +614,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_mod_component_mirror"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cd68eebc90c873130da8ba50f60207533fe0b993a100dc4b337a9fa4c161c69"
-dependencies = [
- "bevy",
- "bevy_rapier3d",
-]
-
-[[package]]
 name = "bevy_pbr"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1608,7 +1598,6 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy-inspector-egui",
- "bevy_mod_component_mirror",
  "bevy_rapier3d",
 ]
 

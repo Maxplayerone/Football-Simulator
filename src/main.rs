@@ -6,7 +6,7 @@ pub const HEIGHT: f32 = 720.0;
 pub const WIDTH: f32 = 1280.0;
 
 mod camera;
-use camera::CustomCameraPlugin;
+use camera::StaticCamera;
 
 #[derive(Component)]
 pub struct PlayerMain;
@@ -34,7 +34,7 @@ fn main() {
         .add_plugin(WorldInspectorPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
-        .add_plugin(CustomCameraPlugin)
+        .add_plugin(StaticCamera)
 
         .add_startup_system_to_stage(StartupStage::PreStartup, asset_loading)
         .add_startup_system(setup_scene)
@@ -98,13 +98,13 @@ fn setup_scene(
     /* Create the bouncing ball. */
     commands
         .spawn(RigidBody::Dynamic)
-        .insert(Collider::ball(0.5))
-        .insert(Restitution::coefficient(0.4))
+        .insert(Collider::ball(0.25))
+        .insert(Restitution::coefficient(1.0))
         .insert(TransformBundle::from(Transform::from_xyz(0.0, 4.0, 0.0)));
 
     //player main
     commands
-        .spawn(RigidBody::KinematicPositionBased)
+        .spawn(RigidBody::Dynamic)
         .insert(Collider::cuboid(0.25, 0.25, 0.25))
         .insert(KinematicCharacterController::default())
         .insert(PbrBundle {
@@ -118,7 +118,7 @@ fn setup_scene(
 
     //player sub
     commands
-        .spawn(RigidBody::KinematicPositionBased)
+        .spawn(RigidBody::Dynamic)
         .insert(Collider::cuboid(0.25, 0.25, 0.25))
         .insert(KinematicCharacterController::default())
         .insert(PbrBundle {
@@ -161,16 +161,16 @@ fn player_main_movement(
 
     let speed = 3.0;
 
-    if keyboard.pressed(KeyCode::W) {
+    if keyboard.pressed(KeyCode::A) {
         player.translation += forward * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::S) {
+    if keyboard.pressed(KeyCode::D) {
         player.translation -= forward * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::D) {
+    if keyboard.pressed(KeyCode::W) {
         player.translation -= left * speed * time.delta_seconds();
     }
-    if keyboard.pressed(KeyCode::A) {
+    if keyboard.pressed(KeyCode::S) {
         player.translation += left * speed * time.delta_seconds();
     }
 }
@@ -189,18 +189,18 @@ fn player_sub_movement(
     forward.y = 0.0;
     forward = forward.normalize();
 
-    let speed = 5.0;
+    let speed = 3.0;
 
-    if keyboard.pressed(KeyCode::Up) {
+    if keyboard.pressed(KeyCode::Left) {
         player.translation += forward * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::Down) {
+    if keyboard.pressed(KeyCode::Right) {
         player.translation -= forward * time.delta_seconds() * speed;
     }
-    if keyboard.pressed(KeyCode::Right) {
+    if keyboard.pressed(KeyCode::Up) {
         player.translation -= left * speed * time.delta_seconds();
     }
-    if keyboard.pressed(KeyCode::Left) {
+    if keyboard.pressed(KeyCode::Down) {
         player.translation += left * speed * time.delta_seconds();
     }
 }

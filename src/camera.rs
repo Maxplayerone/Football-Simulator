@@ -45,7 +45,7 @@ fn cursor_grab(keys: Res<Input<KeyCode>>, mut windows: ResMut<Windows>) {
 
 fn camera_spawn(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.037, 2.5, 8.372).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(-7.342, 7.920, 0.238).with_rotation(Quat::from_xyzw(-1.579, -0.806, -1.582, 1.0)).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
 }
@@ -123,8 +123,8 @@ fn camera_look(
 }
 
 /// Contains everything needed to add first-person fly camera behavior to your game
-pub struct CustomCameraPlugin;
-impl Plugin for CustomCameraPlugin {
+pub struct ControlableCamera;
+impl Plugin for ControlableCamera {
     fn build(&self, app: &mut App) {
         app.init_resource::<EulerAngles>()
             .add_startup_system(camera_spawn)
@@ -132,5 +132,12 @@ impl Plugin for CustomCameraPlugin {
             .add_system(camera_controls)
             .add_system(camera_look)
             .add_system(cursor_grab);
+    }
+}
+
+pub struct StaticCamera;
+impl Plugin for StaticCamera {
+    fn build(&self, app: &mut App) {
+        app.add_startup_system(camera_spawn);
     }
 }
