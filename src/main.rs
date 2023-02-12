@@ -1,12 +1,9 @@
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_rapier3d::prelude::*;
 
 pub const HEIGHT: f32 = 720.0;
 pub const WIDTH: f32 = 1280.0;
-
-mod camera;
-use camera::StaticCamera;
 
 #[derive(Component)]
 pub struct PlayerMain;
@@ -14,9 +11,13 @@ pub struct PlayerMain;
 #[derive(Component)]
 pub struct PlayerSub;
 
+#[derive(Component)]
+pub struct Ball;
+
 #[derive(Resource)]
-pub struct GameAssets{
+pub struct GameAssets {
     goal: Handle<Scene>,
+    ball: Handle<Scene>,
 }
 
 fn main() {
@@ -34,23 +35,19 @@ fn main() {
         .add_plugin(WorldInspectorPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
-        .add_plugin(StaticCamera)
-
         .add_startup_system_to_stage(StartupStage::PreStartup, asset_loading)
         .add_startup_system(setup_scene)
-
-        .add_system(bevy::window::close_on_esc)      
+        .add_system(bevy::window::close_on_esc)
         .add_system(player_sub_movement)
         .add_system(player_main_movement)
+        .add_system(check_if_goal)
         .run();
 }
 
-fn asset_loading(
-    mut commands: Commands,
-    assets: Res<AssetServer>,
-){
-    commands.insert_resource(GameAssets{
+fn asset_loading(mut commands: Commands, assets: Res<AssetServer>) {
+    commands.insert_resource(GameAssets {
         goal: assets.load("goal3.glb#Scene0"),
+        ball: assets.load("ball2.glb#Scene0"),
     });
 }
 
@@ -58,7 +55,7 @@ fn setup_scene(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    assets: Res<GameAssets>
+    assets: Res<GameAssets>,
 ) {
     /* Create the ground. */
     commands
@@ -74,33 +71,39 @@ fn setup_scene(
     //goal left
     commands
         .spawn(RigidBody::Fixed)
-        .insert(Collider::cuboid(0.3, 2.0, 3.0))       
+        .insert(Collider::cuboid(0.3, 2.0, 3.0))
         .insert(SceneBundle {
             scene: assets.goal.clone(),
-            transform: Transform::from_xyz(-4.0, 1.1, 0.0)
-                        .with_scale(Vec3::new(0.4, 0.4, 0.4)),
+            transform: Transform::from_xyz(-4.0, 1.1, 0.0).with_scale(Vec3::new(0.4, 0.4, 0.4)),
             ..Default::default()
-        })     
+        })
+        .insert(Sensor)
         .insert(Name::new("Goal left"));
 
     //goal right
     commands
-    .spawn(RigidBody::Fixed)
-    .insert(Collider::cuboid(0.3, 2.0, 3.0))       
-    .insert(SceneBundle {
-        scene: assets.goal.clone(),
-        transform: Transform::from_xyz(4.0, 1.1, 0.0)
-                    .with_scale(Vec3::new(0.4, 0.4, 0.4)),
-        ..Default::default()
-    })     
-    .insert(Name::new("Goal right"));
+        .spawn(RigidBody::Fixed)
+        .insert(Collider::cuboid(0.3, 2.0, 3.0))
+        .insert(SceneBundle {
+            scene: assets.goal.clone(),
+            transform: Transform::from_xyz(4.0, 1.1, 0.0).with_scale(Vec3::new(0.4, 0.4, 0.4)),
+            ..Default::default()
+        })
+        .insert(Sensor)
+        .insert(Name::new("Goal right"));
 
     /* Create the bouncing ball. */
     commands
         .spawn(RigidBody::Dynamic)
-        .insert(Collider::ball(0.25))
+        .insert(Collider::ball(0.6))
         .insert(Restitution::coefficient(1.0))
-        .insert(TransformBundle::from(Transform::from_xyz(0.0, 4.0, 0.0)));
+        .insert(SceneBundle {
+            scene: assets.ball.clone(),
+            transform: Transform::from_xyz(0.0, 4.0, 0.0).with_scale(Vec3::new(0.25, 0.25, 0.25)),
+            ..Default::default()
+        })
+        .insert(Ball)
+        .insert(Name::new("Ball"));
 
     //player main
     commands
@@ -113,7 +116,9 @@ fn setup_scene(
             transform: Transform::from_xyz(-2.0, 0.25, 0.0),
             ..default()
         })
+        .insert(GravityScale(0.5))
         .insert(PlayerMain)
+        .insert(LockedAxes::ROTATION_LOCKED)
         .insert(Name::new("Player main"));
 
     //player sub
@@ -127,8 +132,17 @@ fn setup_scene(
             transform: Transform::from_xyz(2.0, 0.25, 0.0),
             ..default()
         })
+        .insert(GravityScale(0.5))
+        .insert(LockedAxes::ROTATION_LOCKED)
         .insert(PlayerSub)
         .insert(Name::new("Player Sub"));
+
+    commands.spawn(Camera3dBundle {
+        transform: Transform::from_xyz(-7.342, 7.920, 0.238)
+            .with_rotation(Quat::from_xyzw(-1.579, -0.806, -1.582, 1.0))
+            .looking_at(Vec3::ZERO, Vec3::Y),
+        ..default()
+    });
 
     //light
     commands
@@ -148,8 +162,10 @@ fn player_main_movement(
     keyboard: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut player_query: Query<&mut Transform, With<PlayerMain>>,
+    mut camera_query: Query<&mut Transform, (With<Camera3d>, Without<PlayerMain>)>,
 ) {
     let mut player = player_query.single_mut();
+    let mut camera = camera_query.single_mut();
 
     let mut left = player.left();
     left.y = 0.0;
@@ -165,13 +181,15 @@ fn player_main_movement(
         player.translation += forward * time.delta_seconds() * speed;
     }
     if keyboard.pressed(KeyCode::D) {
-        player.translation -= forward * time.delta_seconds() * speed;
+        player.translation -= forward * time.delta_seconds() * speed;       
     }
     if keyboard.pressed(KeyCode::W) {
         player.translation -= left * speed * time.delta_seconds();
+        camera.translation -= left * time.delta_seconds() * speed;
     }
     if keyboard.pressed(KeyCode::S) {
         player.translation += left * speed * time.delta_seconds();
+        camera.translation += left * time.delta_seconds() * speed;
     }
 }
 
@@ -202,5 +220,13 @@ fn player_sub_movement(
     }
     if keyboard.pressed(KeyCode::Down) {
         player.translation += left * speed * time.delta_seconds();
+    }
+}
+
+fn check_if_goal(ball_transform: Query<&Transform, With<Ball>>) {
+    let ball = ball_transform.single();
+
+    if ball.translation.x > 4.0 || ball.translation.x < -4.0 {
+        println!("gal");
     }
 }
